@@ -9,8 +9,8 @@ class PongGame(object):
     def __init__(self, width, height):
         self.board = Board(width, height)
         self.ball = Ball(self.board, width/2, height/2) #starting with the ball in the middle of the board
-        self.racket1 = Racket(self.board, 20, height/2) #left racket
-        self.racket2 = Racket(self.board, width - 20, height/2) #right racket
+        self.racket1 = Racket(self.board, 0.03 * width, height/2) #left racket
+        self.racket2 = Racket(self.board, width - 0.03 * width, height/2) #right racket
         self.fps_clock = pygame.time.Clock()
         self.running = True #variable telling if the program is running
         self.judge = Judge(self.ball, self.board, self.racket1, self.racket2)
@@ -36,6 +36,7 @@ class PongGame(object):
             pygame.display.update()
 
     def handle_events(self):
+        """Function responsible for getting input from the user """
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -49,44 +50,26 @@ class PongGame(object):
                     self.pause_button.click()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.reset_button.rect.collidepoint(event.pos):
-                    self.reset_button.click()
+                    self.reset_button.click(self.judge)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_1:
                     self.ball.change_speed(1)
-                    self.racket1.change_speed(1)
-                    self.racket2.change_speed(1)
                 elif event.key == pygame.K_2:
                     self.ball.change_speed(2)
-                    self.racket1.change_speed(2)
-                    self.racket2.change_speed(2)
                 elif event.key == pygame.K_3:
                     self.ball.change_speed(3)
-                    self.racket1.change_speed(3)
-                    self.racket2.change_speed(3)
                 elif event.key == pygame.K_4:
                     self.ball.change_speed(4)
-                    self.racket1.change_speed(4)
-                    self.racket2.change_speed(4)
                 elif event.key == pygame.K_5:
                     self.ball.change_speed(5)
-                    self.racket1.change_speed(5)
-                    self.racket2.change_speed(5)
                 elif event.key == pygame.K_6:
                     self.ball.change_speed(6)
-                    self.racket1.change_speed(6)
-                    self.racket2.change_speed(6)
                 elif event.key == pygame.K_7:
                     self.ball.change_speed(7)
-                    self.racket1.change_speed(7)
-                    self.racket2.change_speed(7)
                 elif event.key == pygame.K_8:
                     self.ball.change_speed(8)
-                    self.racket1.change_speed(8)
-                    self.racket2.change_speed(8)
                 elif event.key == pygame.K_9:
                     self.ball.change_speed(9)
-                    self.racket1.change_speed(9)
-                    self.racket2.change_speed(9)
 
         #getting input from arrows - player2
         keys_pressed = pygame.key.get_pressed()
@@ -138,10 +121,11 @@ class Drawable(object):
         self.width = width_ratio * self.board.surface.get_width()
         self.height = height_ratio * self.board.surface.get_height()
         self.surface = pygame.Surface([self.width, self.height], pygame.SRCALPHA, 32).convert_alpha()
-        x += self.width/2
-        y += self.height/2
-        self.rect = self.surface.get_rect(x=x, y=y) #coordinates of the object
-        self.speed = 3
+        #x -= self.width/2
+        #y -= self.height/2
+        self.rect = self.surface.get_rect() #coordinates of the object
+        self.rect.center = (x, y)
+        
 
     def draw_on(self, surface):
         surface.blit(self.surface, self.rect)
@@ -149,13 +133,15 @@ class Drawable(object):
 
 
 class Ball(Drawable):
-    def __init__(self, board, x, y, x_speed = 3, y_speed = 3):
+    def __init__(self, board, x, y, ):
         super(Ball, self).__init__(board, x, y, 0.03, 0.03,)
         pygame.draw.ellipse(self.surface, self.color, [0, 0, self.width, self.height])
-        self.x_speed = x_speed
-        self.y_speed = y_speed
-        self.start_x = x
-        self.start_y = y
+        #adjusting speed to the board size
+        self.speed_ratio = board.surface.get_width()/600
+        self.x_speed = self.speed_ratio * 3
+        self.y_speed = self.speed_ratio * 3
+        self.start_x = x 
+        self.start_y = y 
 
     def bounce_y(self):
         """Changing the direction of movement in y axis"""
@@ -170,7 +156,7 @@ class Ball(Drawable):
         self.rect.y += self.y_speed
         if self.rect.x < 0 or self.rect.x > board.surface.get_width() - self.width:
             self.bounce_x()
-        if self.rect.y < self.height or self.rect.y > board.surface.get_height():
+        if self.rect.y < 0 or self.rect.y > board.surface.get_height() - self.height:
             self.bounce_y()
         for racket in rackets:
             if self.rect.colliderect(racket.rect):
@@ -178,8 +164,7 @@ class Ball(Drawable):
 
     def reset(self):
         """Resets the position of the ball to the beginning position"""
-        self.rect.x = self.start_x
-        self.rect.y = self.start_y
+        self.rect.center = (self.start_x, self.start_y)
 
     def pause(self):
         self.last_x_speed = self.x_speed
@@ -192,8 +177,8 @@ class Ball(Drawable):
         self.y_speed = self.last_y_speed #additional variable to store the speed of objects before pause
 
     def change_speed(self, new_speed):
-        self.x_speed = new_speed * self.direction(self.x_speed) #saving the direction of the move
-        self.y_speed = new_speed * self.direction(self.y_speed)
+        self.x_speed = self.speed_ratio * new_speed * self.direction(self.x_speed) #saving the direction of the move
+        self.y_speed = self.speed_ratio * new_speed * self.direction(self.y_speed)
 
     def direction(self, speed):
         if speed < 0:
@@ -205,20 +190,22 @@ class Ball(Drawable):
 class Racket(Drawable):
     """Racket that we will bounce ball with"""
 
-    def __init__(self, board, x, y,):
+    def __init__(self, board, x, y):
         self.x_start = x
         self.y_start = y
+        self.speed = 27
         super(Racket, self).__init__(board, x, y, 0.03, 0.1)
         pygame.draw.rect(self.surface, self.color, [0, 0, self.width, self.height])
 
     def move(self, y):
-        delta = y - self.rect.y
-        if abs(delta) > self.speed:
-            if delta > 0:
-                delta = self.speed
-            else:
-                delta = - self.speed
-        self.rect.y += delta
+        if not(y < 0 or y > self.board.surface.get_height() - self.height):
+            delta = y - self.rect.y
+            if abs(delta) > self.speed:
+                if delta > 0:
+                    delta = self.speed
+                else:
+                    delta = - self.speed
+            self.rect.y += delta
 
     def pause(self):
         self.last_speed = self.speed #additional variable to store the speed of objects before pause
@@ -227,14 +214,9 @@ class Racket(Drawable):
     def play(self):
         self.speed = self.last_speed
 
-    def change_speed(self, new_speed):
-        self.speed = new_speed
-
     def reset(self):
         """Reseting to starting position"""
-        self.rect.x = self.x_start
-        self.rect.y = self.y_start 
-
+        self.rect.center = (self.x_start, self.y_start)
 
 class Button(Drawable):
 
@@ -295,8 +277,9 @@ class Reset_button(Button):
         y = 0.9 * board.surface.get_height()
         super(Reset_button, self).__init__(board, 'reset', x, y, ball, *rackets)
 
-    def click(self):
+    def click(self, judge):
         self.ball.reset()
+        judge.reset_score()
         for racket in self.rackets:
             racket.reset()
 
@@ -317,12 +300,15 @@ class Judge(object):
         self.font = pygame.font.Font(font_path, size)
 
     def update_score(self):
-        if self.ball.rect.x < 0:
-            self.score[0] += 1
-            self.ball.reset()
-        if self.ball.rect.x > self.board.surface.get_width():
+        if self.ball.rect.x < self.ball.width:
             self.score[1] += 1
             self.ball.reset()
+        if self.ball.rect.x > self.board.surface.get_width() - self.ball.width:
+            self.score[0] += 1
+            self.ball.reset()
+
+    def reset_score(self):
+        self.score = [0, 0]
 
     def draw_text(self, surface,  text, x, y):
         """
